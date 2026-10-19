@@ -1,0 +1,95 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Job Autopilot</title>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--line:#262a33;--fg:#e6e8ee;--mut:#8b93a7;--acc:#4f8cff;--ok:#2ecc71;--warn:#f5a623;--bad:#ff5c5c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,Inter,Segoe UI,sans-serif}
+header{display:flex;align-items:center;gap:16px;padding:14px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+header h1{font-size:17px;margin:0}nav{display:flex;gap:4px;margin-left:auto}nav button{background:none;border:1px solid transparent;color:var(--mut);padding:7px 12px;border-radius:8px;cursor:pointer}
+nav button.on{color:var(--fg);border-color:var(--line);background:var(--card)}
+main{max-width:1200px;margin:0 auto;padding:20px}section{display:none}section.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.stat{padding:12px;border:1px solid var(--line);border-radius:10px}
+.stat b{display:block;font-size:24px}.stat span{color:var(--mut);font-size:12px}
+button.p{background:var(--acc);color:#fff;border:0;padding:9px 14px;border-radius:8px;cursor:pointer;font-weight:600}button.s{background:#222633;color:var(--fg);border:1px solid var(--line);padding:8px 12px;border-radius:8px;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label{display:block;color:var(--mut);font-size:12px;margin:10px 0 4px}input,select,textarea{width:100%;background:#0f1115;border:1px solid var(--line);color:var(--fg);padding:8px;border-radius:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}@media(max-width:700px){.two{grid-template-columns:1fr}}
+pre#log{background:#0b0d11;border:1px solid var(--line);padding:12px;border-radius:10px;max-height:320px;overflow:auto;font-size:12px;white-space:pre-wrap}
+table{width:100%;border-collapse:collapse}th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:13px}th{color:var(--mut);font-weight:500}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--line);color:var(--mut)}
+.tag.applied{color:var(--ok);border-color:var(--ok)}.tag.needs_you{color:var(--warn);border-color:var(--warn)}.tag.ready,.tag.shortlisted{color:var(--acc);border-color:var(--acc)}.tag.failed{color:var(--bad);border-color:var(--bad)}
+a{color:var(--acc)}.mut{color:var(--mut)}.small{font-size:12px}.toggle{display:flex;align-items:center;gap:8px;margin-top:10px}.toggle input{width:auto}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--mut);cursor:pointer}.drop.hot{border-color:var(--acc);color:var(--fg)}
+.pill{padding:3px 8px;border-radius:6px;font-size:12px;background:#222633}.ok{color:var(--ok)}.bad{color:var(--bad)}
+</style></head><body>
+<header><h1>Job Autopilot</h1><span id="stage" class="pill">idle</span>
+<nav><button data-t="dash" class="on">Dashboard</button><button data-t="resumes">Resumes</button><button data-t="prefs">Preferences</button><button data-t="jobs">Jobs</button><button data-t="review">Needs you</button></nav></header>
+<main>
+<section id="dash" class="on">
+ <div class="card"><div class="grid" id="stats"></div></div>
+ <div class="card"><div class="row">
+  <button class="p" id="runFull">Run today's applications</button>
+  <button class="s" data-run="discover">1. Find jobs</button><button class="s" data-run="prepare">2. Score + tailor</button><button class="s" data-run="apply">3. Apply ready jobs</button>
+  <span class="mut small" id="hint"></span></div>
+  <div class="toggle"><input type="checkbox" id="autoSubmit"><label for="autoSubmit" style="margin:0">Auto-submit (off = I fill everything and leave the Submit click to you)</label></div>
+ </div>
+ <div class="card"><div class="row" style="justify-content:space-between"><b>Browser logins</b><div><button class="s" id="loginBtn">Open login window</button> <button class="s" id="loginCheck">Check</button></div></div>
+  <div id="loginStatus" class="mut small" style="margin-top:8px">Log in once to LinkedIn, Indeed, Naukri and Internshala in the window that opens. Close it when done.</div></div>
+ <div class="card"><b>Run log</b><pre id="log"></pre></div>
+</section>
+<section id="resumes">
+ <div class="card"><div class="drop" id="drop">Drop your resumes here (PDF or DOCX) or click to choose. Upload 2 or 3; I merge them into one master profile.</div><input type="file" id="file" multiple accept=".pdf,.docx" style="display:none"></div>
+ <div class="card"><table><thead><tr><th>Use</th><th>Resume</th><th>Text extracted</th><th>Uploaded</th><th></th></tr></thead><tbody id="resList"></tbody></table>
+  <div class="row" style="margin-top:12px"><button class="s" id="rebuild">Rebuild master profile</button><span id="masterState" class="mut small"></span></div>
+  <details style="margin-top:10px"><summary class="mut">View master profile JSON</summary><pre id="master" class="small"></pre></details></div>
+</section>
+<section id="prefs"><div class="card"><form id="pf" class="two">
+ <div><label>Full name</label><input name="name"><label>Email</label><input name="email"><label>Phone</label><input name="phone"><label>City</label><input name="city">
+ <label>LinkedIn URL</label><input name="linkedin_url"><label>GitHub URL</label><input name="github_url"><label>Portfolio URL</label><input name="portfolio_url"></div>
+ <div><label>Target roles (comma separated)</label><input name="roles" placeholder="Frontend Developer, React Developer, Full Stack Intern">
+ <label>Locations (comma separated, first is primary)</label><input name="locations" placeholder="Bengaluru, Remote, Pune">
+ <label>Job types</label><select name="job_types" multiple size="2"><option value="internship">Internship</option><option value="full-time">Full-time</option></select>
+ <label>Experience level</label><select name="experience_level"><option value="fresher">Fresher</option><option value="0-1">0-1 yrs</option><option value="1-3">1-3 yrs</option><option value="3-5">3-5 yrs</option></select>
+ <label>Avoid keywords in title</label><input name="avoid_keywords"><label>Avoid companies</label><input name="avoid_companies"></div>
+ <div><label>Graduation year</label><input name="graduation_year"><label>Notice period (days)</label><input name="notice_period_days" type="number"><label>Current CTC (LPA)</label><input name="current_ctc_lpa" type="number" step="0.1"><label>Expected CTC (LPA)</label><input name="expected_ctc_lpa" type="number" step="0.1">
+ <label>Min stipend / month (INR)</label><input name="min_stipend" type="number"><label>Work authorization</label><input name="work_authorization"><label>Earliest start</label><input name="earliest_start"></div>
+ <div><label>Platforms</label><select name="platforms" multiple size="4"><option value="linkedin">LinkedIn</option><option value="indeed">Indeed</option><option value="naukri">Naukri</option><option value="internshala">Internshala</option></select>
+ <label>Max applications per day</label><input name="max_per_day" type="number"><label>Per-platform cap</label><input name="per_platform_cap" type="number"><label>Minimum fit score to apply (0-100)</label><input name="min_score" type="number">
+ <label>Claude model for tailoring</label><select name="llm_model"><option value="sonnet">Sonnet (cheaper)</option><option value="opus">Opus (best writing)</option><option value="haiku">Haiku (cheapest)</option></select>
+ <div class="toggle"><input type="checkbox" name="remote_ok" id="ro"><label for="ro" style="margin:0">Remote OK</label></div>
+ <div class="toggle"><input type="checkbox" name="willing_to_relocate" id="wr"><label for="wr" style="margin:0">Willing to relocate</label></div></div>
+ <div style="grid-column:1/-1;margin-top:12px"><button class="p" type="submit">Save preferences</button> <span id="pfMsg" class="mut small"></span></div></form></div></section>
+<section id="jobs"><div class="card"><div class="row"><select id="jf" style="width:auto"><option value="">All</option><option>ready</option><option>shortlisted</option><option>new</option><option>needs_you</option><option>applied</option><option>skipped</option><option>failed</option></select><button class="s" id="applySel">Apply selected now</button><span class="mut small">Selecting jobs and pressing this submits them for real.</span></div>
+ <table style="margin-top:10px"><thead><tr><th></th><th>Fit</th><th>Job</th><th>Platform</th><th>Status</th><th>Resume</th><th></th></tr></thead><tbody id="jobList"></tbody></table></div></section>
+<section id="review"><div class="card"><p class="mut">Jobs where I filled what I could but you need to finish: external portals, odd questions, or review mode submissions. Open the link, finish, then mark it.</p><div id="reviewList"></div></div></section>
+</main>
+<script>
+const $=s=>document.querySelector(s), api=(u,o={})=>fetch(u,o).then(r=>r.json());
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,section').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#'+b.dataset.t).classList.add('on');if(b.dataset.t==='jobs')loadJobs();if(b.dataset.t==='review')loadReview();if(b.dataset.t==='resumes')loadMaster();});
+let prefsLoaded=false;
+async function refresh(){const s=await api('/api/state');$('#stage').textContent=s.state.running?('running: '+s.state.stage):'idle';
+ const c=s.counts;$('#stats').innerHTML=[['applied today',s.applied_today],['ready to apply',c.ready||0],['needs you',c.needs_you||0],['shortlisted',c.shortlisted||0],['new (unscored)',c.new||0],['applied total',c.applied||0],['skipped',c.skipped||0]].map(([k,v])=>`<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
+ if(s.run)$('#log').textContent=s.run.log||'';$('#log').scrollTop=1e9;
+ document.querySelectorAll('[data-run],#runFull,#rebuild').forEach(b=>b.disabled=s.state.running);
+ $('#resList').innerHTML=s.resumes.map(r=>`<tr><td><input type=checkbox ${r.active?'checked':''} onchange="api('/api/resumes/${r.id}/toggle',{method:'POST'}).then(refresh)"></td><td>${r.name}</td><td class="${r.chars>200?'ok':'bad'}">${r.chars} chars</td><td class=mut>${r.uploaded_at}</td><td><button class=s onclick="if(confirm('Delete?'))api('/api/resumes/${r.id}',{method:'DELETE'}).then(refresh)">✕</button></td></tr>`).join('')||'<tr><td colspan=5 class=mut>No resumes yet</td></tr>';
+ $('#masterState').textContent=s.has_master?'Master profile ready.':'Master profile not built yet (built automatically on first run).';
+ $('#hint').textContent=!s.resumes.length?'Upload a resume first.':(!s.prefs.roles?'Fill target roles in Preferences.':'');
+ if(!prefsLoaded){fillPrefs(s.prefs);prefsLoaded=true}$('#autoSubmit').checked=!!s.prefs.auto_submit;}
+function fillPrefs(p){const f=$('#pf');for(const el of f.elements){if(!el.name)continue;const v=p[el.name];if(el.type==='checkbox')el.checked=!!v;else if(el.multiple){[...el.options].forEach(o=>o.selected=(v||[]).includes(o.value))}else el.value=v??''}}
+$('#pf').onsubmit=async e=>{e.preventDefault();const d={};for(const el of e.target.elements){if(!el.name)continue;if(el.type==='checkbox')d[el.name]=el.checked;else if(el.multiple)d[el.name]=[...el.selectedOptions].map(o=>o.value);else if(el.type==='number')d[el.name]=Number(el.value||0);else d[el.name]=el.value}await api('/api/prefs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});$('#pfMsg').textContent='Saved.';setTimeout(()=>$('#pfMsg').textContent='',2000)};
+$('#autoSubmit').onchange=e=>api('/api/prefs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_submit:e.target.checked})});
+async function run(m,body){const r=await api('/api/run/'+m,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});if(r.error)alert(r.error);refresh()}
+document.querySelectorAll('[data-run]').forEach(b=>b.onclick=()=>run(b.dataset.run));$('#runFull').onclick=()=>run('full');
+$('#rebuild').onclick=()=>api('/api/master/rebuild',{method:'POST'}).then(refresh);
+async function loadMaster(){$('#master').textContent=JSON.stringify(await api('/api/master'),null,1)}
+$('#loginBtn').onclick=()=>api('/api/login',{method:'POST',body:new FormData()}).then(r=>{$('#loginStatus').textContent=r.error||'A browser window opened with 4 login tabs. Log in to each, then close the window.'});
+$('#loginCheck').onclick=async()=>{const s=await api('/api/login/status');$('#loginStatus').innerHTML=s.busy?'Busy, try after the run.':s.error?s.error:Object.entries(s).map(([k,v])=>`<span class="${v?'ok':'bad'}">${k}: ${v?'logged in':'not logged in'}</span>`).join(' &nbsp; ')};
+const drop=$('#drop'),file=$('#file');drop.onclick=()=>file.click();drop.ondragover=e=>{e.preventDefault();drop.classList.add('hot')};drop.ondragleave=()=>drop.classList.remove('hot');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('hot');upload(e.dataTransfer.files)};file.onchange=()=>upload(file.files);
+async function upload(files){const fd=new FormData();[...files].forEach(f=>fd.append('files',f));drop.textContent='Uploading...';await api('/api/resumes',{method:'POST',body:fd});drop.textContent='Uploaded. Drop more or go to Preferences.';refresh()}
+async function loadJobs(){const st=$('#jf').value;const js=await api('/api/jobs'+(st?'?status='+st:''));$('#jobList').innerHTML=js.map(j=>`<tr><td><input type=checkbox class=sel value="${j.id}" ${j.tailored_pdf?'':'disabled'}></td><td><b>${j.score??'-'}</b><div class="mut small">${j.score_reason||''}</div></td><td><a href="${j.url}" target=_blank>${j.title}</a><div class=mut>${j.company} · ${j.location||''}</div>${j.note?`<div class="small mut">${j.note}</div>`:''}</td><td>${j.platform}</td><td><span class="tag ${j.status}">${j.status}</span></td><td>${j.tailored_pdf?`<a href="/files/pdf/${j.id}" target=_blank>PDF</a>`:'-'}</td><td><select onchange="setStatus(${j.id},this.value)" style="width:auto"><option value="">mark…</option><option value=applied>applied</option><option value=skipped>skip</option><option value=shortlisted>re-shortlist</option></select></td></tr>`).join('')||'<tr><td colspan=7 class=mut>No jobs yet. Run "Find jobs".</td></tr>'}
+$('#jf').onchange=loadJobs;
+async function setStatus(id,st){if(!st)return;await api(`/api/jobs/${id}/status`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:st,note:'set manually'})});loadJobs();loadReview();refresh()}
+$('#applySel').onclick=()=>{const ids=[...document.querySelectorAll('.sel:checked')].map(c=>+c.value);if(!ids.length)return alert('Select jobs that have a PDF');if(confirm(`Submit ${ids.length} application(s) for real?`))run('apply',{job_ids:ids})};
+async function loadReview(){const js=await api('/api/jobs?status=needs_you');$('#reviewList').innerHTML=js.map(j=>`<div class="card"><div class="row" style="justify-content:space-between"><div><b>${j.title}</b> · ${j.company} <span class=tag>${j.platform}</span><div class="mut small">${j.note||''}</div></div><div class=row><a class="s" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none" href="${j.url}" target=_blank>Open job</a>${j.tailored_pdf?`<a class=s style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none" href="/files/pdf/${j.id}" target=_blank>Tailored PDF</a>`:''}<button class=p onclick="setStatus(${j.id},'applied')">I applied</button><button class=s onclick="setStatus(${j.id},'skipped')">Skip</button></div></div>${j.screenshot?`<details style="margin-top:8px"><summary class="mut small">Screenshot</summary><img src="/files/shot/${j.id}" style="max-width:100%;border-radius:8px;margin-top:6px"></details>`:''}</div>`).join('')||'<p class=mut>Nothing waiting on you.</p>'}
+refresh();setInterval(refresh,3000);
+</script></body></html>

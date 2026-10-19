@@ -1,0 +1,34 @@
+<!doctype html><html><head><meta charset="utf-8"><title>{{ r.name }}</title>
+<style>
+ @page { size: A4; }
+ body{font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;color:#111;font-size:10.2pt;line-height:1.32;margin:0}
+ h1{font-size:19pt;margin:0 0 2px;letter-spacing:.2px}
+ .head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1.5px solid #222;padding-bottom:6px;margin-bottom:8px}
+ .contact{font-size:9pt;text-align:right;color:#333}
+ .contact div{margin:1px 0}
+ .headline{font-size:11pt;color:#333;margin:0}
+ h2{font-size:10.5pt;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid #999;margin:9px 0 4px;padding-bottom:2px}
+ .item{margin-bottom:5px}
+ .row{display:flex;justify-content:space-between}
+ .t{font-weight:600}.m{color:#444;font-size:9.3pt}
+ ul{margin:2px 0 0 14px;padding:0}li{margin:0 0 1.5px}
+ .skills div{margin:1px 0}.skills b{font-weight:600}
+ a{color:#111;text-decoration:none}
+</style></head><body>
+<div class="head">
+ <div><h1>{{ r.name }}</h1><p class="headline">{{ r.headline }}</p></div>
+ <div class="contact">
+  <div>{{ r.email }}{% if r.phone %} · {{ r.phone }}{% endif %}</div>
+  <div>{{ r.location }}</div>
+  {% set L = r.links or {} %}
+  <div>{% for k in ['linkedin','github','portfolio'] if L.get(k) %}<a href="{{ L[k] }}">{{ L[k]|replace('https://','')|replace('http://','')|replace('www.','') }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</div>
+ </div>
+</div>
+{% if r.summary %}<h2>Summary</h2><div>{{ r.summary }}</div>{% endif %}
+{% if r.skills %}<h2>Skills</h2><div class="skills">{% for cat, items in r.skills.items() if items %}<div><b>{{ cat }}:</b> {{ items|join(', ') }}</div>{% endfor %}</div>{% endif %}
+{% if r.experience %}<h2>Experience</h2>{% for e in r.experience %}<div class="item"><div class="row"><span class="t">{{ e.title }}{% if e.company %} — {{ e.company }}{% endif %}</span><span class="m">{{ e.start }}{% if e.end %} – {{ e.end }}{% endif %}</span></div>{% if e.location %}<div class="m">{{ e.location }}</div>{% endif %}<ul>{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul></div>{% endfor %}{% endif %}
+{% if r.projects %}<h2>Projects</h2>{% for p in r.projects %}<div class="item"><div class="row"><span class="t">{{ p.name }}{% if p.link %} · <a href="{{ p.link }}">{{ p.link|replace('https://','') }}</a>{% endif %}</span><span class="m">{{ (p.tech or [])|join(', ') }}</span></div><ul>{% for b in p.bullets %}<li>{{ b }}</li>{% endfor %}</ul></div>{% endfor %}{% endif %}
+{% if r.education %}<h2>Education</h2>{% for e in r.education %}<div class="row"><span><span class="t">{{ e.degree }}</span>, {{ e.institution }}{% if e.score %} · {{ e.score }}{% endif %}</span><span class="m">{{ e.year }}</span></div>{% endfor %}{% endif %}
+{% if r.certifications %}<h2>Certifications</h2><div>{{ r.certifications|join(' · ') }}</div>{% endif %}
+{% if r.achievements %}<h2>Achievements</h2><ul>{% for a in r.achievements %}<li>{{ a }}</li>{% endfor %}</ul>{% endif %}
+</body></html>

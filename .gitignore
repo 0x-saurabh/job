@@ -1,0 +1,11 @@
+# secrets and personal data: never commit
+.env
+browser_profile/
+data/
+candidates/
+resumes/
+# environment and caches
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
